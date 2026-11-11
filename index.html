@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITS MANAGER PRO</title>
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#f1f5f9;color:#0f172a}
+header{background:#0f172a;color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:20px}
+header small{opacity:.7}
+nav{background:white;display:flex;gap:5px;padding:10px;overflow-x:auto;position:sticky;top:60px;z-index:9;box-shadow:0 2px 5px rgba(0,0,0,.05)}
+nav button{border:0;background:#e2e8f0;padding:10px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;font-weight:bold}
+nav button.active{background:#0f172a;color:white}
+main{padding:15px;max-width:1100px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.card{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05);cursor:pointer}
+.card b{font-size:22px;display:block}
+.card span{color:#64748b;font-size:13px}
+.card small{color:#dc2626;font-weight:bold}
+section{background:white;padding:15px;border-radius:12px;margin-top:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+input,select{width:100%;padding:10px;margin:5px 0;border:1px solid #cbd5e1;border-radius:8px}
+button.btn{background:#0f172a;color:white;border:0;padding:10px 15px;border-radius:8px;cursor:pointer;font-weight:bold}
+button.btn-green{background:#16a34a}
+button.btn-red{background:#dc2626}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}
+.badge{padding:4px 8px;border-radius:20px;font-size:12px;font-weight:bold}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-green{background:#dcfce7;color:#166534}
+.hidden{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1 id="shopName">🛍️ Ma Boutique</h1>
+<small id="shopPhone">Nouakchott - Mauritanie</small>
+</div>
+<button class="btn" onclick="showPage('parametres')">⚙️ Paramètres</button>
+</header>
+<nav>
+<button onclick="showPage('dashboard')" id="btn-dashboard" class="active">📊 Tableau de bord</button>
+<button onclick="showPage('produits')" id="btn-produits">📦 Produits</button>
+<button onclick="showPage('caisse')" id="btn-caisse">💰 Caisse</button>
+<button onclick="showPage('clients')" id="btn-clients">👥 Clients</button>
+<button onclick="showPage('dettes')" id="btn-dettes">💳 Dettes</button>
+<button onclick="showPage('rapports')" id="btn-rapports">📈 Rapports</button>
+<button onclick="showPage('parametres')" id="btn-parametres">⚙️ Paramètres</button>
+</nav>
+<main>
+<div id="page-dashboard">
+<div class="cards">
+<div class="card" onclick="filterProd('all')"><span>Total Produits</span><b id="kpiProd">0</b></div>
+<div class="card" onclick="filterProd('empty')"><span>Ruptures</span><b id="kpiEmpty" style="color:#dc2626">0</b><small>Cliquez pour voir</small></div>
+<div class="card" onclick="filterProd('low')"><span>Stock Faible</span><b id="kpiLow" style="color:#d97706">0</b></div>
+<div class="card"><span>Chiffre d'affaires</span><b id="kpiCA">0 MRU</b></div>
+<div class="card"><span>Marge</span><b id="kpiMarge" style="color:#16a34a">0 MRU</b></div>
+<div class="card" onclick="showPage('dettes')"><span>💳 Total Dettes</span><b id="kpiDettes" style="color:#dc2626">0 MRU</b><small>Cliquez pour voir qui doit</small></div>
+</div>
+<section>
+<h3>🔔 Alertes Stock</h3>
+<div id="alerts">Aucune alerte pour le moment.</div>
+</section>
+</div>
+<div id="page-produits" class="hidden">
+<section>
+<h3>📦 Ajouter un produit</h3>
+<div class="grid2">
+<input id="pNom" placeholder="Nom du produit ex: Routeur TP-Link">
+<input id="pRef" placeholder="Référence ex: RT-001">
+<input id="pAchat" type="number" placeholder="Prix d'achat">
+<input id="pVente" type="number" placeholder="Prix de vente">
+<input id="pStock" type="number" placeholder="Stock initial">
+<input id="pSeuil" type="number" placeholder="Seuil d'alerte ex: 5">
+</div>
+<button class="btn btn-green" onclick="addProd()">➕ Ajouter Produit</button>
+<div id="filterBanner" class="hidden" style="background:#fef9c3;padding:10px;border-radius:8px;margin-top:10px">Filtre actif : <b id="filterTxt"></b> <button onclick="filterProd('all')">Voir tout</button></div>
+</section>
+<section>
+<h3>Liste des produits</h3>
+<input id="searchProd" placeholder="🔍 Rechercher un produit..." oninput="renderProd()">
+<div style="overflow-x:auto"><table><thead><tr><th>Produit</th><th>Réf</th><th>Achat</th><th>Vente</th><th>Stock</th><th>Action</th></tr></thead><tbody id="prodTable"></tbody></table></div>
+</section>
+</div>
+<!-- CAISSE -->
+<div id="page-caisse" class="hidden">
+<section>
+<h3>💰 Nouvelle Vente</h3>
+<select id="vClient"><option value="">-- Choisir un client --</option></select>
+<select id="vProd"><option value="">-- Choisir un produit --</option></select>
+<input id="vQte" type="number" value="1" min="1" placeholder="Quantité">
+<button class="btn btn-green" onclick="addToCart()">➕ Ajouter au panier</button>
+<h4>Panier</h4>
+<div id="cartList">Panier vide</div>
+<h3 id="cartTotal">Total : 0 MRU</h3>
+<select id="vPaye">
+<option value="paye">💵 Payé comptant</option>
+<option value="credit">💳 À crédit - Le client paiera plus tard</option>
+</select>
+<button class="btn" onclick="validerVente()">✅ Valider la vente</button>
+<p style="font-size:13px;color:#64748b">Astuce : Si tu choisis "À crédit", la vente va automatiquement dans Dettes.</p>
+</section>
+<section>
+<h3>Historique des ventes</h3>
+<div id="ventesList">Aucune vente pour le moment.</div>
+</section>
+</div>
+
+<!-- CLIENTS -->
+<div id="page-clients" class="hidden">
+<section>
+<h3>👥 Ajouter un client</h3>
+<div class="grid2">
+<input id="cNom" placeholder="Nom complet">
+<input id="cTel" placeholder="Téléphone ex: 22 00 00 00">
+</div>
+<button class="btn btn-green" onclick="addClient()">➕ Ajouter Client</button>
+</section>
+<section>
+<h3>Liste des clients</h3>
+<div id="clientsList">Aucun client pour le moment.</div>
+</section>
+</div>
+
+<!-- DETTES - NOUVEAU -->
+<div id="page-dettes" class="hidden">
+<section>
+<h3>💳 Dettes Clients - Qui me doit ?</h3>
+<p><b>Total des dettes à récupérer :</b> <span id="totalDettes" style="color:#dc2626;font-size:20px">0 MRU</span></p>
+<div id="dettesList">Aucune dette pour le moment. Bravo !</div>
+</section>
+<section>
+<h3>📱 Message pour réclamer</h3>
+<p style="font-size:13px;color:#64748b">Clique sur "WhatsApp" à côté d'une dette pour envoyer un message poli au client.</p>
+</section>
+</div>
+
+<!-- RAPPORTS -->
+<div id="page-rapports" class="hidden">
+<section>
+<h3>📈 Rapports</h3>
+<p><b>Chiffre d'affaires total :</b> <span id="repCA">0 MRU</span></p>
+<p><b>Marge totale :</b> <span id="repMarge">0 MRU</span></p>
+<p><b>Nombre de ventes :</b> <span id="repNb">0</span></p>
+<p><b>Nombre de clients :</b> <span id="repClients">0</span></p>
+<p><b>Total Dettes :</b> <span id="repDettes" style="color:#dc2626">0 MRU</span></p>
+<button class="btn" onclick="exportData()">💾 Exporter Sauvegarde (JSON)</button>
+<button class="btn btn-red" onclick="resetAll()">🗑️ Tout Effacer</button>
+</section>
+</div>
+
+<!-- PARAMETRES -->
+<div id="page-parametres" class="hidden">
+<section>
+<h3>⚙️ Paramètres de la Boutique</h3>
+<p style="color:#64748b">C'est ici que tu mets le nom du client quand tu vends l'appli.</p>
+<div class="grid2">
+<input id="sNom" placeholder="Nom de la boutique ex: Boutique Al-Amal">
+<input id="sTel" placeholder="Téléphone de la boutique">
+<input id="sVille" placeholder="Ville ex: Nouakchott - Tevragh Zeina">
+<input id="sDevise" placeholder="Devise ex: MRU">
+</div>
+<button class="btn btn-green" onclick="saveShop()">💾 Enregistrer les infos boutique</button>
+</section>
+</div>
+</main>
+<script>
+let produits = JSON.parse(localStorage.getItem('pro_produits')||'[]');
+let clients = JSON.parse(localStorage.getItem('pro_clients')||'[]');
+let ventes = JSON.parse(localStorage.getItem('pro_ventes')||'[]');
+let dettes = JSON.parse(localStorage.getItem('pro_dettes')||'[]');
+let shop = JSON.parse(localStorage.getItem('pro_shop')||'{"nom":"Ma Boutique","tel":"Nouakchott - Mauritanie","ville":"Nouakchott","devise":"MRU"}');
+let cart = [];
+let productStockFilter = 'all';
+function saveAll(){
+localStorage.setItem('pro_produits',JSON.stringify(produits));
+localStorage.setItem('pro_clients',JSON.stringify(clients));
+localStorage.setItem('pro_ventes',JSON.stringify(ventes));
+localStorage.setItem('pro_dettes',JSON.stringify(dettes));
+localStorage.setItem('pro_shop',JSON.stringify(shop));
+}
+function showPage(p){
+['dashboard','produits','caisse','clients','dettes','rapports','parametres'].forEach(x=>{
+document.getElementById('page-'+x).classList.add('hidden');
+document.getElementById('btn-'+x).classList.remove('active');
+});
+document.getElementById('page-'+p).classList.remove('hidden');
+document.getElementById('btn-'+p).classList.add('active');
+if(p=='produits') renderProd();
+if(p=='caisse') renderCaisse();
+if(p=='clients') renderClients();
+if(p=='dettes') renderDettes();
+if(p=='dashboard') renderDash();
+if(p=='rapports') renderRapports();
+if(p=='parametres') renderShopForm();
+}
+  function renderShopForm(){
+document.getElementById('shopName').textContent='🛍️ '+shop.nom;
+document.getElementById('shopPhone').textContent=shop.tel;
+document.getElementById('sNom').value=shop.nom;
+document.getElementById('sTel').value=shop.tel;
+document.getElementById('sVille').value=shop.ville;
+document.getElementById('sDevise').value=shop.devise;
+}
+function saveShop(){
+shop.nom=document.getElementById('sNom').value||'Ma Boutique';
+shop.tel=document.getElementById('sTel').value||'Nouakchott';
+shop.ville=document.getElementById('sVille').value||'Nouakchott';
+shop.devise=document.getElementById('sDevise').value||'MRU';
+saveAll(); renderShopForm();
+alert('✅ Infos boutique enregistrées : '+shop.nom);
+}
+function filterProd(f){productStockFilter=f;showPage('produits');}
+function addProd(){
+let nom=document.getElementById('pNom').value.trim();
+let achat=parseFloat(document.getElementById('pAchat').value||0);
+let vente=parseFloat(document.getElementById('pVente').value||0);
+if(!nom||vente<=0){alert('Mets un nom et un prix de vente');return;}
+produits.push({id:Date.now(),nom:nom,ref:document.getElementById('pRef').value||'',achat:achat,vente:vente,stock:parseInt(document.getElementById('pStock').value||0),seuil:parseInt(document.getElementById('pSeuil').value||5)});
+saveAll();renderProd();
+['pNom','pRef','pAchat','pVente','pStock','pSeuil'].forEach(id=>document.getElementById(id).value='');
+}
+function renderProd(){
+let q=(document.getElementById('searchProd').value||'').toLowerCase();
+let list=produits.filter(p=>p.nom.toLowerCase().includes(q));
+if(productStockFilter=='empty') list=list.filter(p=>p.stock<=0);
+if(productStockFilter=='low') list=list.filter(p=>p.stock>0 && p.stock<=p.seuil);
+document.getElementById('filterBanner').classList.toggle('hidden',productStockFilter=='all');
+document.getElementById('filterTxt').textContent=productStockFilter=='empty'?'Rupture':productStockFilter=='low'?'Stock Faible':'Tout';
+document.getElementById('prodTable').innerHTML=list.map(p=>{
+let b=p.stock<=0?'<span class="badge badge-red">RUPTURE</span>':p.stock<=p.seuil?'<span class="badge badge-yellow">FAIBLE</span>':'<span class="badge badge-green">OK</span>';
+return `<tr><td><b>${p.nom}</b><br><small>${b}</small></td><td>${p.ref}</td><td>${p.achat}</td><td>${p.vente}</td><td>${p.stock}</td><td><button onclick="addStock(${p.id})">+ Stock</button> <button onclick="delProd(${p.id})">🗑️</button></td></tr>`;
+}).join('')||'<tr><td colspan="6">Aucun produit.</td></tr>';
+}
+function addStock(id){let p=produits.find(x=>x.id==id);let q=parseInt(prompt('Combien ajouter ?', '10')||0);if(q>0){p.stock+=q;saveAll();renderProd();renderDash();}}
+function delProd(id){if(confirm('Supprimer ce produit ?')){produits=produits.filter(x=>x.id!=id);saveAll();renderProd();renderDash();}}
+function addClient(){
+let nom=document.getElementById('cNom').value.trim();
+let tel=document.getElementById('cTel').value.trim();
+if(!nom){alert('Mets le nom du client');return;}
+clients.push({id:Date.now(),nom:nom,tel:tel});
+saveAll();renderClients();
+document.getElementById('cNom').value='';document.getElementById('cTel').value='';
+}
+function renderClients(){
+document.getElementById('clientsList').innerHTML=clients.map(c=>{
+let detteC=dettes.filter(d=>d.clientId==c.id && !d.payee).reduce((s,d)=>s+d.montant,0);
+return `<div style="border:1px solid #e2e8f0;padding:10px;border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between"><div><b>${c.nom}</b><br><small>${c.tel||''}</small><br>${detteC>0?'<span style="color:#dc2626;font-weight:bold">Doit : '+detteC+' '+shop.devise+'</span>':'<span style="color:#16a34a">À jour ✅</span>'}</div><button onclick="delClient(${c.id})">🗑️</button></div>`;
+}).join('')||'Aucun client pour le moment.';
+}
+function delClient(id){if(confirm('Supprimer ce client ?')){clients=clients.filter(x=>x.id!=id);saveAll();renderClients();}}
+function renderCaisse(){
+document.getElementById('vClient').innerHTML='<option value="">-- Choisir un client --</option>'+clients.map(c=>`<option value="${c.id}">${c.nom}</option>`).join('');
+document.getElementById('vProd').innerHTML='<option value="">-- Choisir un produit --</option>'+produits.map(p=>`<option value="${p.id}">${p.nom} - ${p.vente} ${shop.devise} (Stock:${p.stock})</option>`).join('');
+renderCart();
+document.getElementById('ventesList').innerHTML=ventes.slice().reverse().map(v=>{
+let c=clients.find(x=>x.id==v.clientId);
+return `<div style="border:1px solid #e2e8f0;padding:10px;border-radius:10px;margin-bottom:8px"><b>${v.date}</b> - ${c?c.nom:'Client'} - ${v.total} ${shop.devise} ${v.paye=='credit'?'<span class="badge badge-red">À CRÉDIT</span>':'<span class="badge badge-green">PAYÉ</span>'}<br><small>${v.items.map(i=>i.nom+' x'+i.qte).join(', ')}</small></div>`;
+}).join('')||'Aucune vente pour le moment.';
+}
+function addToCart(){
+let pid=parseInt(document.getElementById('vProd').value);
+let qte=parseInt(document.getElementById('vQte').value||1);
+let p=produits.find(x=>x.id==pid);
+if(!p){alert('Choisis un produit');return;}
+if(p.stock<qte){alert('Stock insuffisant ! Il reste '+p.stock);return;}
+let ex=cart.find(x=>x.id==pid);
+if(ex) ex.qte+=qte; else cart.push({id:p.id,nom:p.nom,vente:p.vente,achat:p.achat,qte:qte});
+renderCart();
+}
+function renderCart(){
+let total=cart.reduce((s,i)=>s+i.vente*i.qte,0);
+document.getElementById('cartList').innerHTML=cart.map((i,idx)=>`<div style="display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee"><span>${i.nom} x ${i.qte}</span><span>${i.vente*i.qte} ${shop.devise} <button onclick="cart.splice(${idx},1);renderCart()">❌</button></span></div>`).join('')||'Panier vide';
+document.getElementById('cartTotal').textContent='Total : '+total+' '+shop.devise;
+}
+function validerVente(){
+if(cart.length==0){alert('Panier vide');return;}
+let clientId=parseInt(document.getElementById('vClient').value);
+if(!clientId){alert('Choisis un client d\'abord');return;}
+let type=document.getElementById('vPaye').value;
+let total=cart.reduce((s,i)=>s+i.vente*i.qte,0);
+let marge=cart.reduce((s,i)=>s+(i.vente-i.achat)*i.qte,0);
+cart.forEach(i=>{let p=produits.find(x=>x.id==i.id);if(p) p.stock-=i.qte;});
+ventes.push({id:Date.now(),clientId:clientId,items:[...cart],total:total,marge:marge,paye:type,date:new Date().toLocaleString('fr-FR')});
+if(type=='credit'){
+dettes.push({id:Date.now(),clientId:clientId,montant:total,date:new Date().toLocaleString('fr-FR'),payee:false,venteId:Date.now()});
+alert('💳 Vente à crédit enregistrée ! '+total+' '+shop.devise+' ajouté aux Dettes.');
+}else{
+alert('✅ Vente payée : '+total+' '+shop.devise);
+}
+cart=[];saveAll();renderCaisse();renderDash();showPage('caisse');
+}
+function renderDettes(){
+let total=dettes.filter(d=>!d.payee).reduce((s,d)=>s+d.montant,0);
+document.getElementById('totalDettes').textContent=total+' '+shop.devise;
+document.getElementById('dettesList').innerHTML=dettes.filter(d=>!d.payee).map(d=>{
+let c=clients.find(x=>x.id==d.clientId);
+let nomC=c?c.nom:'Client supprimé';
+let tel=c?c.tel:'';
+let msg=encodeURIComponent('Salam '+nomC+', c\'est '+shop.nom+'. Tu nous dois encore '+d.montant+' '+shop.devise+' pour ton achat du '+d.date+'. Merci de passer régler quand tu peux 🙏');
+let waLink=tel?`https://wa.me/222${tel.replace(/[^0-9]/g,'').slice(-8)}?text=${msg}`:'#';
+return `<div style="border:1px solid #fecaca;background:#fef2f2;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center"><div><b>${nomC}</b><br><small>${d.date}</small><br><b style="color:#dc2626;font-size:18px">${d.montant} ${shop.devise}</b></div><div><a href="${waLink}" target="_blank"><button class="btn btn-green">📱 WhatsApp</button></a> <button class="btn" onclick="payerDette(${d.id})">✅ Payé</button></div></div>`;
+}).join('')||'Aucune dette pour le moment. Bravo !';
+}
+function payerDette(id){
+let d=dettes.find(x=>x.id==id);
+if(confirm('Le client a payé '+d.montant+' '+shop.devise+' ?')){
+d.payee=true;saveAll();renderDettes();renderDash();
+alert('✅ Dette réglée, bravo !');
+}
+}
+function renderDash(){
+let ca=ventes.reduce((s,v)=>s+v.total,0);
+let marge=ventes.reduce((s,v)=>s+v.marge,0);
+let totalDette=dettes.filter(d=>!d.payee).reduce((s,d)=>s+d.montant,0);
+document.getElementById('kpiProd').textContent=produits.length;
+document.getElementById('kpiEmpty').textContent=produits.filter(p=>p.stock<=0).length;
+document.getElementById('kpiLow').textContent=produits.filter(p=>p.stock>0 && p.stock<=p.seuil).length;
+document.getElementById('kpiCA').textContent=ca+' '+shop.devise;
+document.getElementById('kpiMarge').textContent=marge+' '+shop.devise;
+document.getElementById('kpiDettes').textContent=totalDette+' '+shop.devise;
+let alerts=produits.filter(p=>p.stock<=p.seuil).map(p=>`<div>⚠️ <b>${p.nom}</b> : il reste ${p.stock} (seuil ${p.seuil})</div>`).join('');
+document.getElementById('alerts').innerHTML=alerts||'Aucune alerte pour le moment.';
+}
+function renderRapports(){
+document.getElementById('repCA').textContent=ventes.reduce((s,v)=>s+v.total,0)+' '+shop.devise;
+document.getElementById('repMarge').textContent=ventes.reduce((s,v)=>s+v.marge,0)+' '+shop.devise;
+document.getElementById('repNb').textContent=ventes.length;
+document.getElementById('repClients').textContent=clients.length;
+document.getElementById('repDettes').textContent=dettes.filter(d=>!d.payee).reduce((s,d)=>s+d.montant,0)+' '+shop.devise;
+}
+function exportData(){
+let data={produits,clients,ventes,dettes,shop};
+let blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fits-manager-sauvegarde.json';a.click();
+}
+function resetAll(){if(confirm('TOUT effacer ? C\'est irréversible !')){localStorage.clear();location.reload();}}
+renderShopForm();renderDash();renderProd();
+</script>
+</body>
+</html>
