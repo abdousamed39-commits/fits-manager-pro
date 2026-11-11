@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITS MANAGER PRO</title>
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#f1f5f9;color:#0f172a}
+header{background:#0f172a;color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:20px}
+header small{opacity:.7}
+nav{background:white;display:flex;gap:5px;padding:10px;overflow-x:auto;position:sticky;top:60px;z-index:9;box-shadow:0 2px 5px rgba(0,0,0,.05)}
+nav button{border:0;background:#e2e8f0;padding:10px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;font-weight:bold}
+nav button.active{background:#0f172a;color:white}
+main{padding:15px;max-width:1100px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.card{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05);cursor:pointer}
+.card b{font-size:22px;display:block}
+.card span{color:#64748b;font-size:13px}
+.card small{color:#dc2626;font-weight:bold}
+section{background:white;padding:15px;border-radius:12px;margin-top:15px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+input,select{width:100%;padding:10px;margin:5px 0;border:1px solid #cbd5e1;border-radius:8px}
+button.btn{background:#0f172a;color:white;border:0;padding:10px 15px;border-radius:8px;cursor:pointer;font-weight:bold}
+button.btn-green{background:#16a34a}
+button.btn-red{background:#dc2626}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}
+.badge{padding:4px 8px;border-radius:20px;font-size:12px;font-weight:bold}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-green{background:#dcfce7;color:#166534}
+.hidden{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+<div>
+<h1 id="shopName">🛍️ Ma Boutique</h1>
+<small id="shopPhone">Nouakchott - Mauritanie</small>
+</div>
+<button class="btn" onclick="showPage('parametres')">⚙️ Paramètres</button>
+</header>
+
+<nav>
+<button onclick="showPage('dashboard')" id="btn-dashboard" class="active">📊 Tableau de bord</button>
+<button onclick="showPage('produits')" id="btn-produits">📦 Produits</button>
+<button onclick="showPage('caisse')" id="btn-caisse">💰 Caisse</button>
+<button onclick="showPage('clients')" id="btn-clients">👥 Clients</button>
+<button onclick="showPage('rapports')" id="btn-rapports">📈 Rapports</button>
+<button onclick="showPage('parametres')" id="btn-parametres">⚙️ Paramètres</button>
+</nav>
+
+<main>
+<!-- DASHBOARD -->
+<div id="page-dashboard">
+<div class="cards">
+<div class="card" onclick="filterProd('all')"><span>Total Produits</span><b id="kpiProd">0</b></div>
+<div class="card" onclick="filterProd('empty')"><span>Ruptures</span><b id="kpiEmpty" style="color:#dc2626">0</b><small id="kpiEmptyTxt">Cliquez pour voir</small></div>
+<div class="card" onclick="filterProd('low')"><span>Stock Faible</span><b id="kpiLow" style="color:#d97706">0</b></div>
+<div class="card"><span>Chiffre d'affaires</span><b id="kpiCA">0 MRU</b></div>
+<div class="card"><span>Marge</span><b id="kpiMarge" style="color:#16a34a">0 MRU</b></div>
+</div>
+<section>
+<h3>🔔 Alertes Stock</h3>
+<div id="alerts">Aucune alerte pour le moment.</div>
+</section>
+</div>
+
+<!-- PRODUITS -->
+<div id="page-produits" class="hidden">
+<section>
+<h3>📦 Ajouter un produit</h3>
+<div class="grid2">
+<input id="pNom" placeholder="Nom du produit ex: Routeur TP-Link">
+<input id="pRef" placeholder="Référence ex: RT-001">
+<input id="pAchat" type="number" placeholder="Prix d'achat">
+<input id="pVente" type="number" placeholder="Prix de vente">
+<input id="pStock" type="number" placeholder="Stock initial">
+<input id="pSeuil" type="number" placeholder="Seuil d'alerte ex: 5">
+</div>
+<button class="btn btn-green" onclick="addProd()">➕ Ajouter Produit</button>
+<div id="filterBanner" class="hidden" style="background:#fef9c3;padding:10px;border-radius:8px;margin-top:10px">Filtre actif : <b id="filterTxt"></b> <button onclick="filterProd('all')">Voir tout</button></div>
+</section>
+<section>
+<h3>Liste des produits</h3>
+<input id="searchProd" placeholder="🔍 Rechercher un produit..." oninput="renderProd()">
+<div style="overflow-x:auto"><table><thead><tr><th>Produit</th><th>Réf</th><th>Achat</th><th>Vente</th><th>Stock</th><th>Action</th></tr></thead><tbody id="prodTable"></tbody></table></div>
+</section>
+</div>
+<!-- CAISSE -->
+<div id="page-caisse" class="hidden">
+<section>
+<h3>💰 Nouvelle Vente</h3>
+<select id="vClient"><option value="">-- Choisir un client --</option></select>
+<select id="vProd"><option value="">-- Choisir un produit --</option></select>
+<input id="vQte" type="number" value="1" min="1" placeholder="Quantité">
+<button class="btn btn-green" onclick="addToCart()">➕ Ajouter au panier</button>
+<h4>Panier</h4>
+<div id="cartList">Panier vide</div>
+<h3 id="cartTotal">Total : 0 MRU</h3>
+<button class="btn" onclick="validerVente()">✅ Valider la vente</button>
+</section>
+<section>
+<h3>Historique des ventes</h3>
+<div id="ventesList">Aucune vente pour le moment.</div>
+</section>
+</div>
+
+<!-- CLIENTS -->
+<div id="page-clients" class="hidden">
+<section>
+<h3>👥 Ajouter un client</h3>
+<div class="grid2">
+<input id="cNom" placeholder="Nom complet">
+<input id="cTel" placeholder="Téléphone ex: 22 00 00 00">
+</div>
+<button class="btn btn-green" onclick="addClient()">➕ Ajouter Client</button>
+</section>
+<section>
+<h3>Liste des clients</h3>
+<div id="clientsList">Aucun client pour le moment.</div>
+</section>
+</div>
+
+<!-- RAPPORTS -->
+<div id="page-rapports" class="hidden">
+<section>
+<h3>📈 Rapports</h3>
+<p><b>Chiffre d'affaires total :</b> <span id="repCA">0 MRU</span></p>
+<p><b>Marge totale :</b> <span id="repMarge">0 MRU</span></p>
+<p><b>Nombre de ventes :</b> <span id="repNb">0</span></p>
+<p><b>Nombre de clients :</b> <span id="repClients">0</span></p>
+<button class="btn" onclick="exportData()">💾 Exporter Sauvegarde (JSON)</button>
+<button class="btn btn-red" onclick="resetAll()">🗑️ Tout Effacer</button>
+</section>
+</div>
+
+<!-- PARAMETRES - NOUVEAU POUR VERSION PRO -->
+<div id="page-parametres" class="hidden">
+<section>
+<h3>⚙️ Paramètres de la Boutique - Pour chaque client</h3>
+<p style="color:#64748b">C'est ici que tu mets le nom du client quand tu vends l'appli. Ça change partout automatiquement.</p>
+<div class="grid2">
+<input id="sNom" placeholder="Nom de la boutique ex: Boutique Al-Amal">
+<input id="sTel" placeholder="Téléphone de la boutique">
+<input id="sVille" placeholder="Ville ex: Nouakchott - Tevragh Zeina">
+<input id="sDevise" placeholder="Devise ex: MRU">
+</div>
+<button class="btn btn-green" onclick="saveShop()">💾 Enregistrer les infos boutique</button>
+<hr>
+<h3>🔒 Mot de passe Patron</h3>
+<input id="sPass" type="password" placeholder="Nouveau mot de passe ex: 1234">
+<button class="btn" onclick="savePass()">🔒 Changer le mot de passe</button>
+<p style="font-size:13px;color:#64748b">Mot de passe actuel : <b id="currentPass">Aucun (accès libre)</b></p>
+</section>
+</div>
+
+</main>
+<script>
+// VERSION PRO - COMMENCE VIDE POUR CHAQUE NOUVEAU CLIENT
+let produits = JSON.parse(localStorage.getItem('pro_produits')||'[]');
+let clients = JSON.parse(localStorage.getItem('pro_clients')||'[]');
+let ventes = JSON.parse(localStorage.getItem('pro_ventes')||'[]');
+let shop = JSON.parse(localStorage.getItem('pro_shop')||'{"nom":"Ma Boutique","tel":"Nouakchott - Mauritanie","ville":"Nouakchott","devise":"MRU"}');
+let motDePasse = localStorage.getItem('pro_pass')||'';
+let cart = [];
+let productStockFilter = 'all';
+
+function saveAll(){
+localStorage.setItem('pro_produits',JSON.stringify(produits));
+localStorage.setItem('pro_clients',JSON.stringify(clients));
+localStorage.setItem('pro_ventes',JSON.stringify(ventes));
+localStorage.setItem('pro_shop',JSON.stringify(shop));
+}
+function showPage(p){
+['dashboard','produits','caisse','clients','rapports','parametres'].forEach(x=>{
+document.getElementById('page-'+x).classList.add('hidden');
+document.getElementById('btn-'+x).classList.remove('active');
+});
+document.getElementById('page-'+p).classList.remove('hidden');
+document.getElementById('btn-'+p).classList.add('active');
+if(p=='produits') renderProd();
+if(p=='caisse') renderCaisse();
+if(p=='clients') renderClients();
+if(p=='dashboard') renderDash();
+if(p=='rapports') renderRapports();
+if(p=='parametres') renderShopForm();
+}
+function filterProd(f){
+productStockFilter=f;
+let b=document.getElementById('filterBanner');
+if(f=='all'){b.classList.add('hidden');}
+else{
+b.classList.remove('hidden');
+document.getElementById('filterTxt').textContent = f=='empty'?'Ruptures de stock uniquement':'Stock faible uniquement';
+}
+showPage('produits');
+}
+function addProd(){
+let nom=document.getElementById('pNom').value.trim();
+let ref=document.getElementById('pRef').value.trim();
+let achat=parseFloat(document.getElementById('pAchat').value)||0;
+let vente=parseFloat(document.getElementById('pVente').value)||0;
+let stock=parseInt(document.getElementById('pStock').value)||0;
+let seuil=parseInt(document.getElementById('pSeuil').value)||5;
+if(!nom){alert('Mets le nom du produit');return;}
+produits.push({id:Date.now(),nom,ref,achat,vente,stock,seuil});
+saveAll(); renderProd(); renderDash();
+['pNom','pRef','pAchat','pVente','pStock','pSeuil'].forEach(id=>document.getElementById(id).value='');
+alert('Produit ajouté !');
+}
+function renderProd(){
+let q=(document.getElementById('searchProd').value||'').toLowerCase();
+let list=produits.filter(p=>{
+if(productStockFilter=='empty' && p.stock>0) return false;
+if(productStockFilter=='low' && !(p.stock>0 && p.stock<=p.seuil)) return false;
+if(q && !p.nom.toLowerCase().includes(q) && !(p.ref||'').toLowerCase().includes(q)) return false;
+return true;
+});
+let tbody=document.getElementById('prodTable');
+if(list.length==0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#64748b">Aucun produit. Ajoute ton premier produit ci-dessus.</td></tr>';}
+else{
+tbody.innerHTML=list.map(p=>{
+let badge=p.stock==0?'<span class="badge badge-red">RUPTURE</span>':p.stock<=p.seuil?'<span class="badge badge-yellow">FAIBLE</span>':'<span class="badge badge-green">OK</span>';
+return `<tr><td><b>${p.nom}</b><br>${badge}</td><td>${p.ref||'-'}</td><td>${p.achat} ${shop.devise}</td><td>${p.vente} ${shop.devise}</td><td><b>${p.stock}</b></td><td><button onclick="delProd(${p.id})" style="background:#fee2e2;border:0;padding:6px 10px;border-radius:6px;cursor:pointer">🗑️</button></td></tr>`;
+}).join('');
+}
+renderDash();
+}
+function delProd(id){
+if(!confirm('Supprimer ce produit ?')) return;
+produits=produits.filter(p=>p.id!=id); saveAll(); renderProd();
+}
+function renderDash(){
+let empty=produits.filter(p=>p.stock==0).length;
+let low=produits.filter(p=>p.stock>0 && p.stock<=p.seuil).length;
+let ca=ventes.reduce((s,v)=>s+v.total,0);
+let marge=ventes.reduce((s,v)=>s+v.marge,0);
+document.getElementById('kpiProd').textContent=produits.length;
+document.getElementById('kpiEmpty').textContent=empty;
+document.getElementById('kpiLow').textContent=low;
+document.getElementById('kpiCA').textContent=ca+' '+shop.devise;
+document.getElementById('kpiMarge').textContent=marge+' '+shop.devise;
+document.getElementById('shopName').textContent='🛍️ '+shop.nom;
+document.getElementById('shopPhone').textContent=shop.tel+' - '+shop.ville;
+let alerts=produits.filter(p=>p.stock<=p.seuil);
+document.getElementById('alerts').innerHTML=alerts.length==0?'Aucune alerte pour le moment.':alerts.map(p=>`⚠️ <b>${p.nom}</b> : stock ${p.stock} (seuil ${p.seuil})<br>`).join('');
+}
+function addClient(){
+let nom=document.getElementById('cNom').value.trim();
+let tel=document.getElementById('cTel').value.trim();
+if(!nom){alert('Mets le nom du client');return;}
+clients.push({id:Date.now(),nom,tel}); saveAll(); renderClients();
+document.getElementById('cNom').value=''; document.getElementById('cTel').value='';
+alert('Client ajouté !');
+}
+function renderClients(){
+document.getElementById('clientsList').innerHTML=clients.length==0?'Aucun client pour le moment.':clients.map(c=>`<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><span><b>${c.nom}</b> - ${c.tel||''}</span><button onclick="delClient(${c.id})">🗑️</button></div>`).join('');
+}
+function delClient(id){clients=clients.filter(c=>c.id!=id); saveAll(); renderClients();}
+function renderCaisse(){
+let selC=document.getElementById('vClient');
+selC.innerHTML='<option value="">-- Choisir un client --</option>'+clients.map(c=>`<option value="${c.id}">${c.nom}</option>`).join('')+'<option value="0">Client Passager</option>';
+let selP=document.getElementById('vProd');
+selP.innerHTML='<option value="">-- Choisir un produit --</option>'+produits.filter(p=>p.stock>0).map(p=>`<option value="${p.id}">${p.nom} - ${p.vente} ${shop.devise} (Stock:${p.stock})</option>`).join('');
+document.getElementById('cartList').innerHTML=cart.length==0?'Panier vide':cart.map((it,i)=>`<div>${it.nom} x ${it.qte} = ${it.total} ${shop.devise} <button onclick="removeCart(${i})">❌</button></div>`).join('');
+document.getElementById('cartTotal').textContent='Total : '+cart.reduce((s,i)=>s+i.total,0)+' '+shop.devise;
+document.getElementById('ventesList').innerHTML=ventes.length==0?'Aucune vente pour le moment.':ventes.slice().reverse().map(v=>`<div style="padding:8px;border-bottom:1px solid #eee"><b>${v.date}</b> - ${v.client} - <b>${v.total} ${shop.devise}</b> (Marge: ${v.marge})<br><small>${v.items}</small></div>`).join('');
+}
+function addToCart(){
+let pid=parseInt(document.getElementById('vProd').value);
+let qte=parseInt(document.getElementById('vQte').value)||1;
+let p=produits.find(x=>x.id==pid);
+if(!p){alert('Choisis un produit');return;}
+if(qte>p.stock){alert('Stock insuffisant ! Il reste '+p.stock);return;}
+cart.push({id:p.id,nom:p.nom,qte,total:p.vente*qte,marge:(p.vente-p.achat)*qte});
+renderCaisse();
+}
+function removeCart(i){cart.splice(i,1); renderCaisse();}
+function validerVente(){
+if(cart.length==0){alert('Panier vide');return;}
+let cid=document.getElementById('vClient').value;
+let clientName='Client Passager';
+if(cid && cid!='0'){let c=clients.find(x=>x.id==parseInt(cid)); if(c) clientName=c.nom;}
+let total=cart.reduce((s,i)=>s+i.total,0);
+let marge=cart.reduce((s,i)=>s+i.marge,0);
+cart.forEach(it=>{let p=produits.find(x=>x.id==it.id); if(p) p.stock-=it.qte;});
+ventes.push({id:Date.now(),date:new Date().toLocaleString('fr-FR'),client:clientName,total,marge,items:cart.map(i=>i.nom+' x'+i.qte).join(', ')});
+cart=[]; saveAll(); renderCaisse(); renderDash();
+alert('✅ Vente validée ! Total: '+total+' '+shop.devise);
+}
+function renderRapports(){
+let ca=ventes.reduce((s,v)=>s+v.total,0);
+let marge=ventes.reduce((s,v)=>s+v.marge,0);
+document.getElementById('repCA').textContent=ca+' '+shop.devise;
+document.getElementById('repMarge').textContent=marge+' '+shop.devise;
+document.getElementById('repNb').textContent=ventes.length;
+document.getElementById('repClients').textContent=clients.length;
+}
+function renderShopForm(){
+document.getElementById('sNom').value=shop.nom;
+document.getElementById('sTel').value=shop.tel;
+document.getElementById('sVille').value=shop.ville;
+document.getElementById('sDevise').value=shop.devise;
+document.getElementById('currentPass').textContent=motDePasse? '•••• (défini)' : 'Aucun (accès libre)';
+}
+function saveShop(){
+shop.nom=document.getElementById('sNom').value.trim()||'Ma Boutique';
+shop.tel=document.getElementById('sTel').value.trim();
+shop.ville=document.getElementById('sVille').value.trim();
+shop.devise=document.getElementById('sDevise').value.trim()||'MRU';
+saveAll(); renderDash(); alert('✅ Infos boutique enregistrées : '+shop.nom);
+}
+function savePass(){
+let p=document.getElementById('sPass').value.trim();
+if(!p){alert('Mets un mot de passe');return;}
+motDePasse=p; localStorage.setItem('pro_pass',p);
+document.getElementById('sPass').value=''; renderShopForm();
+alert('🔒 Mot de passe enregistré !');
+}
+function exportData(){
+let data={shop,produits,clients,ventes,date:new Date().toISOString()};
+let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sauvegarde-'+shop.nom+'.json'; a.click();
+}
+function resetAll(){
+if(!confirm('⚠️ TOUT EFFACER ? Produits, clients, ventes ?')) return;
+produits=[]; clients=[]; ventes=[]; cart=[]; saveAll(); renderProd(); renderClients(); renderDash(); renderRapports();
+alert('Tout effacé. Prêt pour un nouveau client.');
+}
+// Lancement
+renderDash(); renderProd(); renderShopForm();
+</script>
+</body>
+</html>
